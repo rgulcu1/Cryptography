@@ -4,44 +4,196 @@ import key.SymmetricKey;
 import util.Constants;
 import util.Helper;
 
+import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class AES {
 
-    private String[][] block = new String[4][4];
-
     private static String[][] IV = new String[4][4];
 
-    private static String[][][] expandedKey;
+    public static String[] streamCipherEncryption(String[] plainText, SymmetricKey key, Constants.Method streamMethod) {
 
-    private String[] cipherText;
+        switch (streamMethod) {
+            case CBC:
+                return CBCStreamCipherEncryption(plainText, key);
+            case CTR:
+                return CTRStreamCipherEncryption(plainText, key);
+            default:
+                return CTRStreamCipherEncryption(plainText, key);
+        }
+    }
 
-    public static String[] encrypt(String[] plainText, SymmetricKey key, Constants.Method streamMethod){
+    private static String[] CBCStreamCipherEncryption(String[] plainText, SymmetricKey key) {
 
         generateInitializationVector();
-        keyExpand(key);
-        return null;
+        String[][] block = new String[4][4];
+        Helper.deepCopy2DArray(block, IV);
+        String[] cipherText = new String[plainText.length];
+
+        int totalCycle = plainText.length / 16;
+        int index = 0;
+        for (int i = 0; i < totalCycle; i++) {
+            blockCipherEncryption(block, key);
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    String result = Helper.hexXOR(block[k][j], plainText[index]);
+                    cipherText[index] = result;
+                    block[k][j] = result;
+                    index++;
+                }
+            }
+        }
+        int uncryptedPartLength = plainText.length - index;
+        while (uncryptedPartLength > 0) {
+            cipherText[index] = plainText[index];
+            uncryptedPartLength--;
+            index++;
+        }
+        return cipherText;
+    }
+
+    private static String[] CTRStreamCipherEncryption(String[] plainText, SymmetricKey key) {
+
+        BigInteger maxValueFor8Byte = new BigInteger("FFFFFFFFFFFFFFFF", 16);
+        BigInteger counter = BigInteger.ZERO;
+        String[] cipherText = new String[plainText.length];
+
+        int totalCycle = plainText.length / 16;
+        int index = 0;
+
+        for (int i = 0; i < totalCycle; i++) {
+            String[][] block = generateBlockForCTR(counter);
+            blockCipherEncryption(block, key);
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    index = (i<<4) + (j<<2) + k;
+                    String result = Helper.hexXOR(block[k][j], plainText[index]);
+                    cipherText[index] = result;
+                    block[k][j] = result;
+                }
+            }
+            counter = counter.add(BigInteger.ONE).mod(maxValueFor8Byte);
+        }
+
+        int uncryptedPartLength = plainText.length - index -1;
+        while (uncryptedPartLength > 0) {
+            index++;
+            cipherText[index] = plainText[index];
+            uncryptedPartLength--;
+        }
+        return cipherText;
+    }
+
+    public static String[] streamCipherDecryption(String[] cipherText, SymmetricKey key, Constants.Method streamMethod) {
+
+        switch (streamMethod) {
+            case CBC:
+                return CBCStreamCipherDecryption(cipherText, key);
+            case CTR:
+                return CTRStreamCipherDecryption(cipherText, key);
+            default:
+                return CTRStreamCipherDecryption(cipherText, key);
+        }
+    }
+
+    private static String[] CBCStreamCipherDecryption(String[] cipherText, SymmetricKey key) {
+
+        String[][] block = new String[4][4];
+        Helper.deepCopy2DArray(block, IV);
+        String[] plainText = new String[cipherText.length];
+
+        int totalCycle = plainText.length / 16;
+        int index = 0;
+        for (int i = 0; i < totalCycle; i++) {
+            blockCipherEncryption(block, key);
+
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    String result = Helper.hexXOR(block[k][j], cipherText[index]);
+                    plainText[index] = result;
+                    block[k][j] = cipherText[index];
+                    index++;
+                }
+            }
+        }
+        int unencryptedPartLength = cipherText.length - index;
+        while (unencryptedPartLength > 0) {
+            plainText[index] = cipherText[index];
+            unencryptedPartLength--;
+            index++;
+        }
+        return plainText;
+    }
+
+    private static String[] CTRStreamCipherDecryption(String[] cipherText, SymmetricKey key) {
 
     }
 
+    private static void blockCipherEncryption(String[][] block, SymmetricKey key) {
+
+        String[][][] expandedKey = keyExpand(key);
+        int totalKey = expandedKey.length;
+
+        addRoundKey(block, expandedKey[0]); //Add round key with key 0
+
+        for (int i = 1; i < totalKey - 1; i++) { //Main Rounds
+            subBytes(block);
+            shiftRows(block);
+            mixColumns(block);
+            addRoundKey(block, expandedKey[i]);
+        }
+
+        subBytes(block);
+        shiftRows(block);
+        addRoundKey(block, expandedKey[totalKey - 1]);
+    }
 
     private static void generateInitializationVector() {
 
-
-        for (int i = 0; i <4 ; i++) {
-            byte[] randomByte = new byte[4];
-            new SecureRandom().nextBytes(randomByte);
-
+        for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
 
-                IV[i][j]= String.format("%02x", randomByte[j]).toUpperCase();
+                IV[i][j] = String.format("%02x", new SecureRandom().nextInt(256)).toUpperCase();
             }
         }
     }
 
-    private static void keyExpand(SymmetricKey key) {
+    private static String[] generateNonce() {
+        String[] nonce = new String[8];
+
+        for (int i = 0; i < 8; i++) {
+            nonce[i] = String.format("%02x", new SecureRandom().nextInt(256)).toUpperCase();
+        }
+        return nonce;
+    }
+
+    private static String[][] generateBlockForCTR(BigInteger counter) {
+
+        String[] nonce = generateNonce();
+        String counterAsHex = counter.toString(16);
+        String formattedHex = ("0000000000000000" + counterAsHex).substring(counterAsHex.length()).toUpperCase();
+
+        formattedHex = formattedHex.replaceAll("(.{" + 2 + "})", "$1 ").trim();
+        String[] counterHexArray = formattedHex.split(" ");
+
+        String[][] block = new String[4][4];
+
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 4; j++) {
+                block[j][i] = nonce[(i<<2) + j];
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 4; j++) {
+                block[j][i+2] = counterHexArray[(i<<2) + j];
+            }
+        }
+        return block;
+    }
+
+    private static String[][][] keyExpand(SymmetricKey key) {
 
         String keyAsHex = key.getSymetricKeyAsHex();
 
@@ -51,36 +203,39 @@ public class AES {
         expandedKeyAsLine.addAll(Arrays.asList(keyAsHex.split(" ")));
 
         expandKeyLoop(expandedKeyAsLine);
+        return generateKeys(expandedKeyAsLine);
 
-        generateKeys
     }
 
+    private static String[][][] generateKeys(ArrayList<String> expandedKeyAsLine) {
 
-    private static void generateKeys(ArrayList<String> expandedKeyAsLine) {
-
-        int totalKeyNumber=11;
+        int totalKeyNumber = 11;
 
         switch (expandedKeyAsLine.size()) {
-            case 176: totalKeyNumber = 11;
+            case 176:
+                totalKeyNumber = 11;
                 break;
-            case 208: totalKeyNumber = 13;
+            case 208:
+                totalKeyNumber = 13;
                 break;
-            case 240: totalKeyNumber=15;
+            case 240:
+                totalKeyNumber = 15;
                 break;
 
         }
 
-        expandedKey = new String[totalKeyNumber][4][4];
+        String[][][] expandedKey = new String[totalKeyNumber][4][4];
 
         for (int i = 0; i < totalKeyNumber; i++) {
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
 
-                    expandedKey[i][k][j] = expandedKeyAsLine.get(i<<4 + j << 2 + k);
+                    expandedKey[i][k][j] = expandedKeyAsLine.get((i << 4) + (j << 2) + k);
 
                 }
             }
         }
+        return expandedKey;
     }
 
     private static void expandKeyLoop(ArrayList<String> expandedKey) {
@@ -92,25 +247,29 @@ public class AES {
 
         int totalByte;
 
-        switch (keyByte){
-            case 16: totalByte=176;
+        switch (keyByte) {
+            case 16:
+                totalByte = 176;
                 break;
-            case 24: totalByte=208;
+            case 24:
+                totalByte = 208;
                 break;
-            case 32: totalByte=240;
+            case 32:
+                totalByte = 240;
                 break;
-            default: totalByte=176;
+            default:
+                totalByte = 176;
         }
 
 
-        while(c < totalByte) {
+        while (c < totalByte) {
 
             if (c % keyByte == 0) {
                 List<String> rootWord = new ArrayList<>(expandedKey.subList(c - 4, c));
-                Collections.rotate(rootWord,-1);
-                rootWord.forEach(s -> rootWord.set(rootWord.indexOf(s),substitueByte(s)));
+                Collections.rotate(rootWord, -1);
+                rootWord.forEach(s -> rootWord.set(rootWord.indexOf(s), subByte(s)));
                 String[] rcon = Constants.RCON[i];
-                List<String> firstWord = new ArrayList<>(expandedKey.subList(indexCtr, indexCtr+4));
+                List<String> firstWord = new ArrayList<>(expandedKey.subList(indexCtr, indexCtr + 4));
 
 
                 for (int j = 0; j < 4; j++) {
@@ -120,32 +279,139 @@ public class AES {
                     rootWord.set(j, newHex);
                 }
                 expandedKey.addAll(rootWord);
-                c+=4;
+                c += 4;
                 i++;
-                indexCtr+=4;
+                indexCtr += 4;
                 continue;
             }
 
-            List<String> firstWord = new ArrayList<>(expandedKey.subList(indexCtr, indexCtr+4));
-            List<String> secondWord = new ArrayList<>(expandedKey.subList(indexCtr+ keyByte - 4, indexCtr+keyByte));
+            List<String> firstWord = new ArrayList<>(expandedKey.subList(indexCtr, indexCtr + 4));
+            List<String> secondWord = new ArrayList<>(expandedKey.subList(indexCtr + keyByte - 4, indexCtr + keyByte));
 
             for (int j = 0; j < 4; j++) {
 
                 String newHex = Helper.hexXOR(firstWord.get(j), secondWord.get(j));
                 expandedKey.add(newHex);
             }
-            c+=4;
-            indexCtr+=4;
+            c += 4;
+            indexCtr += 4;
         }
     }
 
-    private static String substitueByte(String hex) {
+    private static String subByte(String hex) {
 
         int decimalValue = Integer.parseInt(hex, 16);
         int changedValue = Constants.SBOX[decimalValue];
 
-        return Integer.toHexString(changedValue).toUpperCase();
+        String str = Integer.toHexString(changedValue).toUpperCase();
+        return ("00" + str).substring(str.length()).toUpperCase();
     }
 
+    private static void addRoundKey(String[][] block, String[][] key) {
 
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+
+                block[i][j] = Helper.hexXOR(block[i][j], key[i][j]);
+            }
+        }
+    }
+
+    private static void subBytes(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+
+                block[i][j] = subByte(block[i][j]);
+            }
+        }
+    }
+
+    private static void shiftRows(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            List<String> currentRow = Arrays.asList(block[i]);
+            Collections.rotate(currentRow, -i);
+        }
+    }
+
+    private static void mixColumns(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            String[] column = new String[4];
+            for (int j = 0; j < 4; j++) {
+                column[j] = block[j][i];
+            }
+            mixColumn(column);
+            for (int j = 0; j < 4; j++) {
+                block[j][i] = column[j];
+            }
+        }
+    }
+
+    private static void mixColumn(String[] column) {
+
+        String[] temp = new String[column.length];
+        for (int i = 0; i < 4; i++) {
+            String tempResult = "00";
+            for (int j = 0; j < 4; j++) {
+                String mulpResult = polynomialMulp(column[j], Constants.GALOIS_FIELD[i][j]);
+                tempResult = polynomialAdd(mulpResult, tempResult);
+            }
+            temp[i] = polynomialMod(tempResult);
+        }
+        for (int i = 0; i < column.length; i++) {
+            column[i] = temp[i];
+        }
+    }
+
+    private static String polynomialAdd(String polyn1, String polyn2) {
+
+        int poly1AsDecimal = Integer.valueOf(polyn1, 16);
+        int poly2AsDecimal = Integer.valueOf(polyn2, 16);
+
+        int result = poly1AsDecimal ^ poly2AsDecimal;
+        return Integer.toHexString(result);
+    }
+
+    private static String polynomialMulp(String multiplicand, int multiplier) {
+
+        String multiplierAsBinary = Integer.toString(multiplier, 2);
+        int multiplierAsDecimal = Integer.valueOf(multiplicand, 16);
+        int result = 0;
+
+        int degree = 0;
+        for (int i = multiplierAsBinary.length() - 1; i >= 0; i--) {
+            if (multiplierAsBinary.charAt(i) == '1') {
+                result = result ^ (multiplierAsDecimal << degree);
+            }
+            degree++;
+        }
+        return Integer.toString(result, 16);
+    }
+
+    private static String polynomialMod(String hexValue) {
+
+        Integer decimalValue = Integer.valueOf(hexValue, 16);
+        String binaryValue = Integer.toString(decimalValue, 2);
+
+        int differ = binaryValue.length() - Constants.GALOIS_MODULO_VALUE.length();
+
+        if (differ < 0) return ("00" + hexValue).substring(hexValue.length()).toUpperCase();
+
+        Integer galoisAsDecimal = Integer.valueOf(Constants.GALOIS_MODULO_VALUE, 2);
+        galoisAsDecimal = galoisAsDecimal << differ;
+
+        int result;
+
+        while (true) {
+            result = galoisAsDecimal ^ decimalValue;
+
+            if (Integer.toString(result, 2).length() < Constants.GALOIS_MODULO_VALUE.length()) {
+                String str = Integer.toHexString(result);
+                return ("00" + str).substring(str.length()).toUpperCase();
+            }
+        }
+    }
 }
+

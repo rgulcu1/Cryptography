@@ -66,16 +66,51 @@ public class main {
 
         publicKey.verifyDigitalSignature(digitalSignature, Constants.message);*/
 
-        String[] abc = {"was"};
-        AES.encrypt(abc, k2, Constants.Method.CTR);
-
-
-       /* ImageInfo imageInfo = Helper.getRGBvaluesOfImage(Constants.PLAIN_IMAGE_NAME);
-
+        System.out.println("Image Reading...");
+        ImageInfo imageInfo = Helper.getRGBvaluesOfImage(Constants.IMAGES_FOLDER_PATH+Constants.PLAIN_IMAGE_NAME);
         String[] pixelsAsByte = Helper.convertIntArrayToByteArray(imageInfo.getPixels());
 
-        Helper.printImageWithRgbPixels(imageInfo, "ridoNew.jpg");*/
+        System.out.println("Image Encrypting with 128 Bit K1 key in CBC mode...");
+        String[] cipherTextAsByte128CBC = AES.streamCipherEncryption(pixelsAsByte, k1, Constants.Method.CBC);
+        ImageInfo cipherImage128CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte128CBC));
+        Helper.printImageWithRgbPixels(cipherImage128CBC, Constants.METHOD_CBC_KEY_128_PATH+Constants.ENCRYPTED_IMAGE_NAME+"_v1");
+        System.out.println("Encrypted image is printed.");
 
+        System.out.println("Initial Vector is changed and again image Encrypting with 128 Bit K1 key in CBC mode...");
+        String[] cipherTextAsByte128CBCv2 = AES.streamCipherEncryption(pixelsAsByte, k1, Constants.Method.CBC);
+        ImageInfo cipherImage128CBCv2 = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte128CBCv2));
+        Helper.printImageWithRgbPixels(cipherImage128CBCv2, Constants.METHOD_CBC_KEY_128_PATH+Constants.ENCRYPTED_IMAGE_NAME+"_v2");
+        System.out.println("Encrypted image version 2 is printed.");
+
+        System.out.println("Image Decrypting with 128 Bit K1 key in CBC mode...");
+        String[] decryptedImageAsByte128CBC = AES.streamCipherDecryption(cipherTextAsByte128CBC, k1, Constants.Method.CBC);
+        ImageInfo decryptedImage128CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte128CBC));
+        Helper.printImageWithRgbPixels(decryptedImage128CBC, Constants.METHOD_CBC_KEY_128_PATH+Constants.DECRYPTED_IMAGE_NAME);
+        System.out.println("Decrypted image is printed.");
+
+        System.out.println("Image Encrypting with 256 Bit K2 key in CBC mode...");
+        String[] cipherTextAsByte256CBC = AES.streamCipherEncryption(pixelsAsByte, k2, Constants.Method.CBC);
+        ImageInfo cipherImage256CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte256CBC));
+        Helper.printImageWithRgbPixels(cipherImage256CBC, Constants.METHOD_CBC_KEY_256_PATH+Constants.ENCRYPTED_IMAGE_NAME);
+        System.out.println("Encrypted image is printed.");
+
+        System.out.println("Image Decrypting with 256 Bit K2 key in CBC mode...");
+        String[] decryptedImageAsByte256CBC = AES.streamCipherDecryption(cipherTextAsByte256CBC, k2, Constants.Method.CBC);
+        ImageInfo decryptedImage256CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte256CBC));
+        Helper.printImageWithRgbPixels(decryptedImage256CBC, Constants.METHOD_CBC_KEY_256_PATH+Constants.DECRYPTED_IMAGE_NAME);
+        System.out.println("Decrypted image is printed.");
+
+        System.out.println("Image Encrypting with 256 Bit K2 key in CTR mode...");
+        String[] cipherTextAsByte256CTR = AES.streamCipherEncryption(pixelsAsByte, k2, Constants.Method.CTR);
+        ImageInfo cipherImage256CTR = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte256CTR));
+        Helper.printImageWithRgbPixels(cipherImage256CTR, Constants.METHOD_CTR_PATH+Constants.ENCRYPTED_IMAGE_NAME);
+        System.out.println("Encrypted image is printed.");
+
+        System.out.println("Image Decrypting with 256 Bit K2 key in CTR mode...");
+        String[] decryptedImageAsByte256CTR = AES.streamCipherDecryption(cipherTextAsByte256CTR, k2, Constants.Method.CTR);
+        ImageInfo decryptedImage256CTR = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte256CTR));
+        Helper.printImageWithRgbPixels(decryptedImage256CTR, Constants.METHOD_CTR_PATH+Constants.DECRYPTED_IMAGE_NAME);
+        System.out.println("Decrypted image is printed.");
 
     }
 

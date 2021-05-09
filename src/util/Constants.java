@@ -17,11 +17,20 @@ public final class Constants {
 
     public final static Integer MILLER_RABIN_ITERATION = 10;
 
-    public final static String PLAIN_IMAGE_NAME = "image.jpg";
+    public final static String PLAIN_IMAGE_NAME = "image2.jpg";
 
-    public final static String ENCRYPTED_IMAGE_NAME = "encryptedImage.jpg";
+    public final static String ENCRYPTED_IMAGE_NAME = "encryptedImage";
 
-    public final static String DECRYPTED_IMAGE_NAME = "decryptedImage.jpg";
+    public final static String DECRYPTED_IMAGE_NAME = "decryptedImage";
+
+    public final static String IMAGES_FOLDER_PATH = "images/";
+
+    public final static String METHOD_CBC_KEY_128_PATH= "images/CBC/128BitKey/";
+
+    public final static String METHOD_CBC_KEY_256_PATH = "images/CBC/256BitKey/";
+
+    public final static String METHOD_CTR_PATH = "images/CTR/";
+
 
     public final static String message = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque condimentum suscipit elit sit amet aliquet.\n" +
             "Praesent congue pretium ipsum, nec laoreet lectus auctor quis. Vestibulum elementum leo blandit nulla finibus vestibulum.\n" +
@@ -53,8 +62,13 @@ public final class Constants {
             0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
             0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};
 
+    public final static int[][] GALOIS_FIELD = {{2, 3, 1, 1}, {1, 2, 3, 1}, {1, 1, 2, 3}, {3, 1, 1, 2}};
+
+    public static final String GALOIS_MODULO_VALUE = "100011011";
+
+
     public enum Method{
-        CFB,
+        CBC,
         CTR
     }
 }

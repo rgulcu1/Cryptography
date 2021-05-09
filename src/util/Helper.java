@@ -84,6 +84,12 @@ public class Helper {
         }
     }
 
+    public static void deepCopy2DArray(Object[][] destination, Object[][] source) {
+        for (int i = 0; i <4 ; i++) {
+            destination[i] = source[i].clone();
+        }
+    }
+
     private static String bytesToHex(byte[] hash) {
         StringBuilder hexString = new StringBuilder(2 * hash.length);
         for (int i = 0; i < hash.length; i++) {
@@ -187,7 +193,7 @@ public class Helper {
             }
         }
 
-        File file = new File(imageName);
+        File file = new File(imageName+".jpg");
         try {
             ImageIO.write(img, "jpg", file);
         } catch (IOException e) {
@@ -214,14 +220,32 @@ public class Helper {
         return arrayAsHex.split(" ");
     }
 
+    public static int[] convertByteArrayToIntArray(String[] array) {
+
+        int length = array.length;
+        int[] ints = new int[length / 4];
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i+=4) {
+            sb.append(array[i]);
+            sb.append(array[i+1]);
+            sb.append(array[i+2]);
+            sb.append(array[i+3]);
+
+            String integerAsHex = sb.toString();
+            ints[i/4] = new BigInteger(integerAsHex, 16).intValue();
+            sb.setLength(0);
+        }
+
+        return ints;
+    }
+
+
     public static String hexXOR(String a, String b) {
 
         int n1 = Integer.parseInt(a, 16);
         int n2 = Integer.parseInt(b, 16);
         int n3 = n1 ^ n2;
         return String.format("%02x", n3).toUpperCase();
-
-
     }
 
 }
