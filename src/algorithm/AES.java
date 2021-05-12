@@ -1,19 +1,21 @@
 package algorithm;
 
 import key.SymmetricKey;
-import util.Constants;
 import util.Helper;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.stream.Collectors;
+
+import static util.Constants.*;
 
 public class AES {
 
     private static String[][] IV = new String[4][4];
 
-    public static String[] streamCipherEncryption(String[] plainText, SymmetricKey key, Constants.Method streamMethod) {
+    private static String[] nonce;
+
+    public static String[] streamCipherEncryption(String[] plainText, SymmetricKey key, Method streamMethod) {
 
         switch (streamMethod) {
             case CBC:
@@ -56,37 +58,41 @@ public class AES {
 
     private static String[] CTRStreamCipherEncryption(String[] plainText, SymmetricKey key) {
 
+        generateNonce(plainText.length);
         BigInteger maxValueFor8Byte = new BigInteger("FFFFFFFFFFFFFFFF", 16);
         BigInteger counter = BigInteger.ZERO;
         String[] cipherText = new String[plainText.length];
+        ArrayList<BigInteger> counterList = new ArrayList<>();
 
         int totalCycle = plainText.length / 16;
-        int index = 0;
 
-        for (int i = 0; i < totalCycle; i++) {
-            String[][] block = generateBlockForCTR(counter);
+        for (int i = 0; i <totalCycle ; i++) {
+            counterList.add(counter);
+            counter=counter.add(BigInteger.ONE).mod(maxValueFor8Byte);
+        }
+
+        counterList.parallelStream().forEach(cnt -> {
+            String[][] block = generateBlockForCTR(cnt);
             blockCipherEncryption(block, key);
+            int i = cnt.intValue();
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
-                    index = (i<<4) + (j<<2) + k;
+                    int index = (i<<4) + (j<<2) + k;
                     String result = Helper.hexXOR(block[k][j], plainText[index]);
                     cipherText[index] = result;
-                    block[k][j] = result;
                 }
             }
-            counter = counter.add(BigInteger.ONE).mod(maxValueFor8Byte);
+        });
+
+        for (int i = plainText.length - 16; i < plainText.length; i++) {
+
+            if(cipherText[i] == null) cipherText[i] = plainText[i];
         }
 
-        int uncryptedPartLength = plainText.length - index -1;
-        while (uncryptedPartLength > 0) {
-            index++;
-            cipherText[index] = plainText[index];
-            uncryptedPartLength--;
-        }
         return cipherText;
     }
 
-    public static String[] streamCipherDecryption(String[] cipherText, SymmetricKey key, Constants.Method streamMethod) {
+    public static String[] streamCipherDecryption(String[] cipherText, SymmetricKey key, Method streamMethod) {
 
         switch (streamMethod) {
             case CBC:
@@ -129,6 +135,36 @@ public class AES {
 
     private static String[] CTRStreamCipherDecryption(String[] cipherText, SymmetricKey key) {
 
+        BigInteger maxValueFor8Byte = new BigInteger("FFFFFFFFFFFFFFFF", 16);
+        BigInteger counter = BigInteger.ZERO;
+        String[] plainText = new String[cipherText.length];
+        ArrayList<BigInteger> counterList = new ArrayList<>();
+
+        int totalCycle = cipherText.length / 16;
+
+        for (int i = 0; i <totalCycle ; i++) {
+            counterList.add(counter);
+            counter=counter.add(BigInteger.ONE).mod(maxValueFor8Byte);
+        }
+
+        counterList.parallelStream().forEach(cnt -> {
+            String[][] block = generateBlockForCTR(cnt);
+            blockCipherEncryption(block, key);
+            int i = cnt.intValue();
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    int index = (i<<4) + (j<<2) + k;
+                    String result = Helper.hexXOR(block[k][j], cipherText[index]);
+                    plainText[index] = result;
+                }
+            }
+        });
+
+        for (int i = plainText.length - 16; i < plainText.length; i++) {
+
+            if(plainText[i] == null) plainText[i] = cipherText[i];
+        }
+        return plainText;
     }
 
     private static void blockCipherEncryption(String[][] block, SymmetricKey key) {
@@ -160,18 +196,15 @@ public class AES {
         }
     }
 
-    private static String[] generateNonce() {
-        String[] nonce = new String[8];
-
-        for (int i = 0; i < 8; i++) {
+    private static void generateNonce(int length) {
+        nonce = new String[length/2];
+        for (int i = 0; i < length/2; i++) {
             nonce[i] = String.format("%02x", new SecureRandom().nextInt(256)).toUpperCase();
         }
-        return nonce;
     }
 
     private static String[][] generateBlockForCTR(BigInteger counter) {
 
-        String[] nonce = generateNonce();
         String counterAsHex = counter.toString(16);
         String formattedHex = ("0000000000000000" + counterAsHex).substring(counterAsHex.length()).toUpperCase();
 
@@ -179,10 +212,11 @@ public class AES {
         String[] counterHexArray = formattedHex.split(" ");
 
         String[][] block = new String[4][4];
+        BigInteger blockNumber = counter.multiply(BigInteger.valueOf(8));
 
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 4; j++) {
-                block[j][i] = nonce[(i<<2) + j];
+                block[j][i] = nonce[blockNumber.intValue() + (i<<2) + j];
             }
         }
         for (int i = 0; i < 2; i++) {
@@ -268,7 +302,7 @@ public class AES {
                 List<String> rootWord = new ArrayList<>(expandedKey.subList(c - 4, c));
                 Collections.rotate(rootWord, -1);
                 rootWord.forEach(s -> rootWord.set(rootWord.indexOf(s), subByte(s)));
-                String[] rcon = Constants.RCON[i];
+                String[] rcon = RCON[i];
                 List<String> firstWord = new ArrayList<>(expandedKey.subList(indexCtr, indexCtr + 4));
 
 
@@ -301,7 +335,7 @@ public class AES {
     private static String subByte(String hex) {
 
         int decimalValue = Integer.parseInt(hex, 16);
-        int changedValue = Constants.SBOX[decimalValue];
+        int changedValue = SBOX[decimalValue];
 
         String str = Integer.toHexString(changedValue).toUpperCase();
         return ("00" + str).substring(str.length()).toUpperCase();
@@ -355,7 +389,7 @@ public class AES {
         for (int i = 0; i < 4; i++) {
             String tempResult = "00";
             for (int j = 0; j < 4; j++) {
-                String mulpResult = polynomialMulp(column[j], Constants.GALOIS_FIELD[i][j]);
+                String mulpResult = polynomialMulp(column[j], GALOIS_FIELD[i][j]);
                 tempResult = polynomialAdd(mulpResult, tempResult);
             }
             temp[i] = polynomialMod(tempResult);
@@ -395,11 +429,11 @@ public class AES {
         Integer decimalValue = Integer.valueOf(hexValue, 16);
         String binaryValue = Integer.toString(decimalValue, 2);
 
-        int differ = binaryValue.length() - Constants.GALOIS_MODULO_VALUE.length();
+        int differ = binaryValue.length() - GALOIS_MODULO_VALUE.length();
 
         if (differ < 0) return ("00" + hexValue).substring(hexValue.length()).toUpperCase();
 
-        Integer galoisAsDecimal = Integer.valueOf(Constants.GALOIS_MODULO_VALUE, 2);
+        Integer galoisAsDecimal = Integer.valueOf(GALOIS_MODULO_VALUE, 2);
         galoisAsDecimal = galoisAsDecimal << differ;
 
         int result;
@@ -407,7 +441,7 @@ public class AES {
         while (true) {
             result = galoisAsDecimal ^ decimalValue;
 
-            if (Integer.toString(result, 2).length() < Constants.GALOIS_MODULO_VALUE.length()) {
+            if (Integer.toString(result, 2).length() < GALOIS_MODULO_VALUE.length()) {
                 String str = Integer.toHexString(result);
                 return ("00" + str).substring(str.length()).toUpperCase();
             }

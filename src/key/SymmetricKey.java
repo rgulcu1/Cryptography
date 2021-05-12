@@ -8,8 +8,15 @@ public class SymmetricKey implements Key {
 
     private String symetricKey;
 
+    private int bitSize;
+
+    public int getBitSize() {
+        return bitSize;
+    }
+
     public SymmetricKey(int bitsize) {
 
+        this.bitSize = bitsize;
         this.symetricKey = generateSymetrixKey(bitsize);
     }
 

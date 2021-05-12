@@ -3,13 +3,16 @@ import key.KeyPair;
 import key.PrivateKey;
 import key.PublicKey;
 import key.SymmetricKey;
-import util.Constants;
 import util.Helper;
 import util.ImageInfo;
 
-import java.math.BigInteger;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
+import static util.Constants.*;
+import static util.Constants.Method.CBC;
+import static util.Constants.Method.CTR;
+
 
 public class main {
 
@@ -18,7 +21,6 @@ public class main {
         KeyPair keyPair = algorithm.RSA.generateKeyset();
         PrivateKey privateKey = (PrivateKey) keyPair.getPrivateKey();
         PublicKey publicKey = (PublicKey) keyPair.getPublicKey();
-
 
         System.out.println("Public and Private Key generated with algorithm.RSA\n");
 
@@ -30,88 +32,97 @@ public class main {
         System.out.print("Symmetric key 2 (K2): ");
         System.out.println(k2.getSymetricKeyAsHex());
 
-       /* System.out.println("\n*******************************************************************************************************************\n");
+        System.out.println("\n*******************************************************************************************************************\n");
+        encryptAndDecryptSymmetricKey(k1,publicKey,privateKey);
+        System.out.println("\n*******************************************************************************************************************\n");
+        encryptAndDecryptSymmetricKey(k2,publicKey,privateKey);
+        System.out.println("\n*******************************************************************************************************************\n");
+        applyAndVerifyDigitalSignature(publicKey, privateKey);
+        System.out.println("\n*******************************************************************************************************************\n");
 
-        String cipherTextK1 = publicKey.encrypt(k1.getSymetricKeyAsHex());
+        System.out.println("Image Reading...");
+        ImageInfo imageInfo = Helper.getRGBvaluesOfImage(IMAGES_FOLDER_PATH+PLAIN_IMAGE_NAME);
+        int height = imageInfo.getHeight();
+        int width = imageInfo.getWidth();
+        String[] pixelsAsByte = Helper.convertIntArrayToByteArray(imageInfo.getPixels());
+
+        String pathEnc128BitCBCv1 = METHOD_CBC_KEY_128_PATH + ENCRYPTED_IMAGE_NAME + "_v1";
+        String pathDec128BitCBC = METHOD_CBC_KEY_128_PATH + DECRYPTED_IMAGE_NAME;
+        String[] encryptedImage128CBCv1 = encryptImageAndPrint(pixelsAsByte, CBC, pathEnc128BitCBCv1, k1, width, height);
+        decryptImageAndPrint(encryptedImage128CBCv1, CBC,pathDec128BitCBC, k1, width, height);
+
+        System.out.println("Initial Vector is changed and again apply encryption.");
+        String pathEnc128BitCBCv2 = METHOD_CBC_KEY_128_PATH + ENCRYPTED_IMAGE_NAME + "_v2";
+        encryptImageAndPrint(pixelsAsByte, CBC, pathEnc128BitCBCv2, k1, width, height);
+
+        System.out.println("\n*******************************************************************************************************************\n");
+
+        String pathEnc256BitCBC = METHOD_CBC_KEY_256_PATH + ENCRYPTED_IMAGE_NAME;
+        String pathDec256BitCBC = METHOD_CBC_KEY_256_PATH + DECRYPTED_IMAGE_NAME;
+        String[] encryptedImage256CBC = encryptImageAndPrint(pixelsAsByte, CBC, pathEnc256BitCBC, k2, width, height);
+        decryptImageAndPrint(encryptedImage256CBC, CBC,pathDec256BitCBC, k2, width, height);
+
+        System.out.println("\n*******************************************************************************************************************\n");
+
+        String pathEnc256BitCTR = METHOD_CTR_PATH + ENCRYPTED_IMAGE_NAME;
+        String pathDec256BitCTR = METHOD_CTR_PATH + DECRYPTED_IMAGE_NAME;
+        String[] encryptedImage256CTR = encryptImageAndPrint(pixelsAsByte, CTR, pathEnc256BitCTR, k2, width, height);
+        decryptImageAndPrint(encryptedImage256CTR, CTR,pathDec256BitCTR, k2, width, height);
+
+    }
+    private static void encryptAndDecryptSymmetricKey(SymmetricKey symmetricKey, PublicKey publicKey, PrivateKey privateKey) {
+
+        String cipherTextK1 = publicKey.encrypt(symmetricKey.getSymetricKeyAsHex());
         System.out.print("K1 is encrypted with Ka+ . The ciphertext is: ");
-        System.out.println(cipherTextK1);
+        System.out.println(cipherTextK1.replaceAll("(.{" + 100 + "})", "$1 \n\t\t\t\t\t\t\t\t\t\t\t  "));
 
         String plainTextK1 = privateKey.decrypt(cipherTextK1);
         System.out.print("K1 is decrypted with Ka- . The plaintext is: ");
         System.out.println(plainTextK1);
+    }
 
-
-        System.out.println("\n*******************************************************************************************************************\n");
-
-        String cipherTextK2 = publicKey.encrypt(k2.getSymetricKeyAsHex());
-        System.out.print("K2 is encrypted with Ka+ . The ciphertext is: ");
-        System.out.println(cipherTextK2);
-
-        String plainTextK2 = privateKey.decrypt(cipherTextK2);
-        System.out.print("K2 is decrypted with Ka- . The plaintext is: ");
-        System.out.println(plainTextK2);
-
-        System.out.println("\n*******************************************************************************************************************\n");
+    private static void applyAndVerifyDigitalSignature(PublicKey publicKey, PrivateKey privateKey) {
 
         System.out.println("Message:");
-        System.out.println(Constants.message);
+        System.out.println(message);
 
-        String hashedMessage = Helper.hashWithSHA256(Constants.message);
+        String hashedMessage = Helper.hashWithSHA256(message);
         System.out.print("\nApplied SHA256 to message. H(m): ");
         System.out.println(hashedMessage);
 
         String digitalSignature = privateKey.generateDigitalSignature(hashedMessage);
         System.out.print("\nH(m) encrypt with Ka-. Digital Signature: ");
-        System.out.println(digitalSignature);
+        System.out.println(digitalSignature.replaceAll("(.{" + 100 + "})", "$1 \n\t\t\t\t\t\t\t\t\t\t  "));
 
-        publicKey.verifyDigitalSignature(digitalSignature, Constants.message);*/
+        publicKey.verifyDigitalSignature(digitalSignature, message);
+    }
 
-        System.out.println("Image Reading...");
-        ImageInfo imageInfo = Helper.getRGBvaluesOfImage(Constants.IMAGES_FOLDER_PATH+Constants.PLAIN_IMAGE_NAME);
-        String[] pixelsAsByte = Helper.convertIntArrayToByteArray(imageInfo.getPixels());
+    private static String[] encryptImageAndPrint(String[] imagePixels, Method method, String imagePath, SymmetricKey key, int width, int height) {
 
-        System.out.println("Image Encrypting with 128 Bit K1 key in CBC mode...");
-        String[] cipherTextAsByte128CBC = AES.streamCipherEncryption(pixelsAsByte, k1, Constants.Method.CBC);
-        ImageInfo cipherImage128CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte128CBC));
-        Helper.printImageWithRgbPixels(cipherImage128CBC, Constants.METHOD_CBC_KEY_128_PATH+Constants.ENCRYPTED_IMAGE_NAME+"_v1");
-        System.out.println("Encrypted image is printed.");
+        NumberFormat formatter = new DecimalFormat("#0.00000");
 
-        System.out.println("Initial Vector is changed and again image Encrypting with 128 Bit K1 key in CBC mode...");
-        String[] cipherTextAsByte128CBCv2 = AES.streamCipherEncryption(pixelsAsByte, k1, Constants.Method.CBC);
-        ImageInfo cipherImage128CBCv2 = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte128CBCv2));
-        Helper.printImageWithRgbPixels(cipherImage128CBCv2, Constants.METHOD_CBC_KEY_128_PATH+Constants.ENCRYPTED_IMAGE_NAME+"_v2");
-        System.out.println("Encrypted image version 2 is printed.");
+        long start = System.currentTimeMillis();
+        System.out.println("Image Encrypting with "+key.getBitSize()+" Bit key in "+method.name()+" mode...");
+        String[] cipherImageText = AES.streamCipherEncryption(imagePixels, key, method);
+        long end = System.currentTimeMillis();
+        ImageInfo cipherImage = new ImageInfo(height, width, Helper.convertByteArrayToIntArray(cipherImageText));
+        Helper.printImageWithRgbPixels(cipherImage, imagePath);
+        System.out.println("Image is encrypted in "+formatter.format((end - start) / 1000d)+" seconds.");
 
-        System.out.println("Image Decrypting with 128 Bit K1 key in CBC mode...");
-        String[] decryptedImageAsByte128CBC = AES.streamCipherDecryption(cipherTextAsByte128CBC, k1, Constants.Method.CBC);
-        ImageInfo decryptedImage128CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte128CBC));
-        Helper.printImageWithRgbPixels(decryptedImage128CBC, Constants.METHOD_CBC_KEY_128_PATH+Constants.DECRYPTED_IMAGE_NAME);
-        System.out.println("Decrypted image is printed.");
+        return cipherImageText;
+    }
 
-        System.out.println("Image Encrypting with 256 Bit K2 key in CBC mode...");
-        String[] cipherTextAsByte256CBC = AES.streamCipherEncryption(pixelsAsByte, k2, Constants.Method.CBC);
-        ImageInfo cipherImage256CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte256CBC));
-        Helper.printImageWithRgbPixels(cipherImage256CBC, Constants.METHOD_CBC_KEY_256_PATH+Constants.ENCRYPTED_IMAGE_NAME);
-        System.out.println("Encrypted image is printed.");
+    private static void decryptImageAndPrint(String[] cipherImage, Method method, String imagePath, SymmetricKey key, int width, int height) {
 
-        System.out.println("Image Decrypting with 256 Bit K2 key in CBC mode...");
-        String[] decryptedImageAsByte256CBC = AES.streamCipherDecryption(cipherTextAsByte256CBC, k2, Constants.Method.CBC);
-        ImageInfo decryptedImage256CBC = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte256CBC));
-        Helper.printImageWithRgbPixels(decryptedImage256CBC, Constants.METHOD_CBC_KEY_256_PATH+Constants.DECRYPTED_IMAGE_NAME);
-        System.out.println("Decrypted image is printed.");
+        NumberFormat formatter = new DecimalFormat("#0.00000");
 
-        System.out.println("Image Encrypting with 256 Bit K2 key in CTR mode...");
-        String[] cipherTextAsByte256CTR = AES.streamCipherEncryption(pixelsAsByte, k2, Constants.Method.CTR);
-        ImageInfo cipherImage256CTR = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(cipherTextAsByte256CTR));
-        Helper.printImageWithRgbPixels(cipherImage256CTR, Constants.METHOD_CTR_PATH+Constants.ENCRYPTED_IMAGE_NAME);
-        System.out.println("Encrypted image is printed.");
-
-        System.out.println("Image Decrypting with 256 Bit K2 key in CTR mode...");
-        String[] decryptedImageAsByte256CTR = AES.streamCipherDecryption(cipherTextAsByte256CTR, k2, Constants.Method.CTR);
-        ImageInfo decryptedImage256CTR = new ImageInfo(imageInfo.getHeight(), imageInfo.getWidth(), Helper.convertByteArrayToIntArray(decryptedImageAsByte256CTR));
-        Helper.printImageWithRgbPixels(decryptedImage256CTR, Constants.METHOD_CTR_PATH+Constants.DECRYPTED_IMAGE_NAME);
-        System.out.println("Decrypted image is printed.");
-
+        long start = System.currentTimeMillis();
+        System.out.println("Image Decrypting with "+key.getBitSize()+" Bit key in "+method.name()+" mode...");
+        String[] decryptedImageText= AES.streamCipherDecryption(cipherImage, key, method);
+        long end = System.currentTimeMillis();
+        ImageInfo decryptedImage = new ImageInfo(height, width, Helper.convertByteArrayToIntArray(decryptedImageText));
+        Helper.printImageWithRgbPixels(decryptedImage, imagePath);
+        System.out.println("Image is decrypted in "+formatter.format((end - start) / 1000d)+" seconds.\n");
     }
 
 }

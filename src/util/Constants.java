@@ -32,13 +32,9 @@ public final class Constants {
     public final static String METHOD_CTR_PATH = "images/CTR/";
 
 
-    public final static String message = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque condimentum suscipit elit sit amet aliquet.\n" +
-            "Praesent congue pretium ipsum, nec laoreet lectus auctor quis. Vestibulum elementum leo blandit nulla finibus vestibulum.\n" +
-            "Praesent facilisis ante eleifend quam feugiat mattis. Duis eu velit tincidunt, vehicula augue nec, aliquet risus.\n" +
-            "Morbi vitae ipsum ac augue euismod facilisis sit amet vel massa. Suspendisse nec varius erat. Phasellus rhoncus vulputate nisi vel condimentum. \n" +
-            "Phasellus varius, justo id maximus rhoncus, ipsum neque egestas est, eget cursus magna purus at metus. Aliquam ultrices nec ipsum et feugiat. \n" +
-            "Nam ac ipsum in nulla tristique efficitur id tempus est. Curabitur iaculis tempus quam, et sagittis nunc. \n" +
-            "Etiam erat lectus, aliquam non condimentum ac, accumsan vitae magna. Etiam scelerisque id lectus non lobortis. Aliquam at sapien vel sem vehicula faucibus.";
+    public final static String message = "The FDA authorized the vaccine for adolescents following a study involving 2,260 participants ages 12 to 15; 1,131 who were given the vaccine and 1,129 who were given a saline placebo. \n" +
+            "The most common side effects among those who received the vaccine were generally mild and lasted one to three days — pain at the injection site, tiredness, headache, chills, muscle pain, fever and joint pain. \n" +
+            "The side effects are similar to those for adults and older teenagers. Some people who got the shot did not receive any side effects.\n";
 
 
     public final static String[][] RCON = {{"01", "00", "00", "00"}, {"02", "00", "00", "00"}, {"04", "00", "00", "00"}, {"08", "00", "00", "00"}, {"10", "00", "00", "00"}, {"20", "00", "00", "00"}, {"40", "00", "00", "00"},

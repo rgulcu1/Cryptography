@@ -1,40 +1,34 @@
 package util;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.WritableRaster;
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Random;
+import static util.Constants.*;
+
 
 public class Helper {
 
-
-
     public static void calculateFirstFewPrime(){ // use Sieve of Eratosthenes
 
-        boolean[] isNotPrime = new boolean[Constants.SIEVE_OF_ERATOSTHENES_N + 1];
+        boolean[] isNotPrime = new boolean[SIEVE_OF_ERATOSTHENES_N + 1];
 
-        for (int i = 2; i <= Math.sqrt(Constants.SIEVE_OF_ERATOSTHENES_N ) ; i++) {
+        for (int i = 2; i <= Math.sqrt(SIEVE_OF_ERATOSTHENES_N ) ; i++) {
 
             if (!isNotPrime[i]) {
-                for (int j = i*i; j <= Constants.SIEVE_OF_ERATOSTHENES_N ; j+=i) {
+                for (int j = i*i; j <= SIEVE_OF_ERATOSTHENES_N ; j+=i) {
                     isNotPrime[j] = true;
                 }
             }
         }
 
-        for (int i = 2; i <= Constants.SIEVE_OF_ERATOSTHENES_N ; i++) {
+        for (int i = 2; i <= SIEVE_OF_ERATOSTHENES_N ; i++) {
 
-            if (!isNotPrime[i]) Constants.firstFewPrime.add(i);
+            if (!isNotPrime[i]) firstFewPrime.add(i);
         }
 
     }
@@ -71,7 +65,6 @@ public class Helper {
         return res;
     }
 
-
     public static String hashWithSHA256(String data) {
 
         try {
@@ -101,42 +94,6 @@ public class Helper {
         }
         return hexString.toString().toUpperCase();
     }
-
-    public static byte[] readImageAsByteArray (String imagePath){
-        // open image
-        Path source = Paths.get(imagePath);
-
-        BufferedImage bi = null;
-        try {
-            bi = ImageIO.read(source.toFile());
-
-            // convert BufferedImage to byte[]
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(bi, "png", baos);
-           return baos.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public static void printByteArrayAsImage(byte[] bytes, String imageName) {
-
-        InputStream is = new ByteArrayInputStream(bytes);
-        Path path = Paths.get(imageName);
-
-        BufferedImage newBi = null;
-        try {
-            newBi = ImageIO.read(is);
-            // save it
-            ImageIO.write(newBi, "png", path.toFile());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-
-    }
-
 
     public static ImageInfo getRGBvaluesOfImage(String imagePath) {
 
@@ -238,7 +195,6 @@ public class Helper {
 
         return ints;
     }
-
 
     public static String hexXOR(String a, String b) {
 
