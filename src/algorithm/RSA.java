@@ -47,7 +47,7 @@ public class RSA {
 
         BigInteger candidatePrime;
         while(true) {
-            candidatePrime = generateRandomOddNumber(bitSize);
+            candidatePrime = generateRandomOddNumber(bitSize); // generate random odd number
 
             boolean firstTestPassed = lowLevelPrimeTest(candidatePrime);
 

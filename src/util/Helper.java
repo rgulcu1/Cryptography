@@ -3,6 +3,7 @@ package util;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -112,7 +113,7 @@ public class Helper {
 
             }
 
-            return new ImageInfo(height,width,unrollArray(rgbPixels));
+            return new ImageInfo(height,width,unrollIntArray(rgbPixels));
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -120,12 +121,27 @@ public class Helper {
         }
     }
 
-    private static int[] unrollArray(int[][] doubleArray) {
+    private static int[] unrollIntArray(int[][] doubleArray) {
 
         int length = doubleArray.length;
         int length1 = doubleArray[0].length;
 
         int[] unrolledLoop = new int[length * length1];
+        for (int i = 0; i < length; i++) {
+            for (int j = 0; j < length1; j++) {
+                unrolledLoop[i*length1 + j] = doubleArray[i][j];
+            }
+        }
+
+        return unrolledLoop;
+    }
+
+    public static String[] unrollStringArray(String[][] doubleArray) {
+
+        int length = doubleArray.length;
+        int length1 = doubleArray[0].length;
+
+        String[] unrolledLoop = new String[length * length1];
         for (int i = 0; i < length; i++) {
             for (int j = 0; j < length1; j++) {
                 unrolledLoop[i*length1 + j] = doubleArray[i][j];
@@ -204,4 +220,15 @@ public class Helper {
         return String.format("%02x", n3).toUpperCase();
     }
 
+    public static <T> T[] concatenateArrays(T[] a, T[] b) {
+        int aLen = a.length;
+        int bLen = b.length;
+
+        @SuppressWarnings("unchecked")
+        T[] c = (T[]) Array.newInstance(a.getClass().getComponentType(), aLen + bLen);
+        System.arraycopy(a, 0, c, 0, aLen);
+        System.arraycopy(b, 0, c, aLen, bLen);
+
+        return c;
+    }
 }

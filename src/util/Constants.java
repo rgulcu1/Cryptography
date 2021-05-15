@@ -17,7 +17,7 @@ public final class Constants {
 
     public final static Integer MILLER_RABIN_ITERATION = 10;
 
-    public final static String PLAIN_IMAGE_NAME = "image2.jpg";
+    public final static String PLAIN_IMAGE_NAME = "image.jpg";
 
     public final static String ENCRYPTED_IMAGE_NAME = "encryptedImage";
 
@@ -59,6 +59,8 @@ public final class Constants {
             0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};
 
     public final static int[][] GALOIS_FIELD = {{2, 3, 1, 1}, {1, 2, 3, 1}, {1, 1, 2, 3}, {3, 1, 1, 2}};
+
+    public final static int[][] GALOIS_FIELD_INVERSE = {{14, 11, 13, 9}, {9, 14, 11, 13}, {13, 9, 14, 11}, {11, 13, 9, 14}};
 
     public static final String GALOIS_MODULO_VALUE = "100011011";
 

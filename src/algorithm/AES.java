@@ -23,7 +23,7 @@ public class AES {
             case CTR:
                 return CTRStreamCipherEncryption(plainText, key);
             default:
-                return CTRStreamCipherEncryption(plainText, key);
+                return CBCStreamCipherEncryption(plainText, key);
         }
     }
 
@@ -33,17 +33,25 @@ public class AES {
         String[][] block = new String[4][4];
         Helper.deepCopy2DArray(block, IV);
         String[] cipherText = new String[plainText.length];
+        String[] IVconcatCipher = Helper.concatenateArrays(Helper.unrollStringArray(IV),cipherText);
+
 
         int totalCycle = plainText.length / 16;
         int index = 0;
         for (int i = 0; i < totalCycle; i++) {
-            blockCipherEncryption(block, key);
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
-                    String result = Helper.hexXOR(block[k][j], plainText[index]);
-                    cipherText[index] = result;
+                    String result = Helper.hexXOR(IVconcatCipher[index], plainText[index]);
                     block[k][j] = result;
                     index++;
+                }
+            }
+            blockCipherEncryption(block, key);
+
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    cipherText[(i<<4)+(j<<2) + k] =  block[k][j];
+                    IVconcatCipher[(i<<4) + (j<<2) + k + 16] = block[k][j];
                 }
             }
         }
@@ -107,19 +115,23 @@ public class AES {
     private static String[] CBCStreamCipherDecryption(String[] cipherText, SymmetricKey key) {
 
         String[][] block = new String[4][4];
-        Helper.deepCopy2DArray(block, IV);
-        String[] plainText = new String[cipherText.length];
 
+        String[] plainText = new String[cipherText.length];
+        String[] IVconcatCipher = Helper.concatenateArrays(Helper.unrollStringArray(IV),cipherText);
         int totalCycle = plainText.length / 16;
         int index = 0;
         for (int i = 0; i < totalCycle; i++) {
-            blockCipherEncryption(block, key);
+            for (int j = 0; j <4 ; j++) {
+                for (int k = 0; k <4 ; k++) {
+                    block[k][j] = cipherText[(j<<2) +k +index];
+                }
+            }
+            blockCipherDecryption(block, key);
 
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
-                    String result = Helper.hexXOR(block[k][j], cipherText[index]);
+                    String result = Helper.hexXOR(block[k][j], IVconcatCipher[index]);
                     plainText[index] = result;
-                    block[k][j] = cipherText[index];
                     index++;
                 }
             }
@@ -184,6 +196,25 @@ public class AES {
         subBytes(block);
         shiftRows(block);
         addRoundKey(block, expandedKey[totalKey - 1]);
+    }
+
+    private static void blockCipherDecryption(String[][] block, SymmetricKey key) {
+
+        String[][][] expandedKey = keyExpand(key);
+        int totalKey = expandedKey.length;
+
+        addRoundKey(block, expandedKey[totalKey -1]); //Add round key with last key
+
+        for (int i = totalKey -2; i >0; i--) { //Main Rounds
+            inverseShiftRows(block);
+            inverseSubBytes(block);
+            addRoundKey(block, expandedKey[i]);
+            inverseMixColumns(block);
+        }
+
+        inverseShiftRows(block);
+        inverseSubBytes(block);
+        addRoundKey(block, expandedKey[0]);
     }
 
     private static void generateInitializationVector() {
@@ -341,6 +372,34 @@ public class AES {
         return ("00" + str).substring(str.length()).toUpperCase();
     }
 
+
+    public static void main(String[] args) {
+
+        String[][] block = {{"32", "88", "31", "e0"}, {"43", "5a", "31", "37"}, {"f6", "30", "98", "07"}, {"a8", "8d", "a2", "34"}};
+        SymmetricKey symmetricKey = new SymmetricKey(128);
+        blockCipherEncryption(block,symmetricKey);
+        blockCipherDecryption(block, symmetricKey);
+
+    }
+    private static String subByteInverse(String hex) {
+
+        int decimalValue = Integer.parseInt(hex, 16);
+
+        for (int i = 0; i < SBOX.length; i++) {
+            if(decimalValue == SBOX[i]) {
+                int i1 = i / 16;
+                int i2 = i % 16;
+
+                StringBuilder sb = new StringBuilder();
+                sb.append(Integer.toHexString(i1));
+                sb.append(Integer.toHexString(i2));
+
+                return sb.toString().toUpperCase();
+            }
+        }
+        return null;
+    }
+
     private static void addRoundKey(String[][] block, String[][] key) {
 
         for (int i = 0; i < 4; i++) {
@@ -361,11 +420,29 @@ public class AES {
         }
     }
 
+    private static void inverseSubBytes(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+
+                block[i][j] = subByteInverse(block[i][j]);
+            }
+        }
+    }
+
     private static void shiftRows(String[][] block) {
 
         for (int i = 0; i < 4; i++) {
             List<String> currentRow = Arrays.asList(block[i]);
             Collections.rotate(currentRow, -i);
+        }
+    }
+
+    private static void inverseShiftRows(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            List<String> currentRow = Arrays.asList(block[i]);
+            Collections.rotate(currentRow, i);
         }
     }
 
@@ -383,6 +460,20 @@ public class AES {
         }
     }
 
+    private static void inverseMixColumns(String[][] block) {
+
+        for (int i = 0; i < 4; i++) {
+            String[] column = new String[4];
+            for (int j = 0; j < 4; j++) {
+                column[j] = block[j][i];
+            }
+            inverseMixColumn(column);
+            for (int j = 0; j < 4; j++) {
+                block[j][i] = column[j];
+            }
+        }
+    }
+
     private static void mixColumn(String[] column) {
 
         String[] temp = new String[column.length];
@@ -390,6 +481,22 @@ public class AES {
             String tempResult = "00";
             for (int j = 0; j < 4; j++) {
                 String mulpResult = polynomialMulp(column[j], GALOIS_FIELD[i][j]);
+                tempResult = polynomialAdd(mulpResult, tempResult);
+            }
+            temp[i] = polynomialMod(tempResult);
+        }
+        for (int i = 0; i < column.length; i++) {
+            column[i] = temp[i];
+        }
+    }
+
+    private static void inverseMixColumn(String[] column) {
+
+        String[] temp = new String[column.length];
+        for (int i = 0; i < 4; i++) {
+            String tempResult = "00";
+            for (int j = 0; j < 4; j++) {
+                String mulpResult = polynomialMulp(column[j], GALOIS_FIELD_INVERSE[i][j]);
                 tempResult = polynomialAdd(mulpResult, tempResult);
             }
             temp[i] = polynomialMod(tempResult);
@@ -434,12 +541,14 @@ public class AES {
         if (differ < 0) return ("00" + hexValue).substring(hexValue.length()).toUpperCase();
 
         Integer galoisAsDecimal = Integer.valueOf(GALOIS_MODULO_VALUE, 2);
-        galoisAsDecimal = galoisAsDecimal << differ;
+        int galoisAsDecimalExtended = galoisAsDecimal << differ;
 
-        int result;
+        int result = decimalValue;
 
         while (true) {
-            result = galoisAsDecimal ^ decimalValue;
+            differ = Integer.toString(result,2).length() - GALOIS_MODULO_VALUE.length();
+            galoisAsDecimalExtended = galoisAsDecimal << differ;
+            result = result ^ galoisAsDecimalExtended;
 
             if (Integer.toString(result, 2).length() < GALOIS_MODULO_VALUE.length()) {
                 String str = Integer.toHexString(result);

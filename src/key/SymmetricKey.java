@@ -17,10 +17,10 @@ public class SymmetricKey implements Key {
     public SymmetricKey(int bitsize) {
 
         this.bitSize = bitsize;
-        this.symetricKey = generateSymetrixKey(bitsize);
+        this.symetricKey = generateSymmetricKey(bitsize);
     }
 
-    private String generateSymetrixKey(int bitsize) {
+    private String generateSymmetricKey(int bitsize) {
 
 
         SecureRandom secureRandom = new SecureRandom();
