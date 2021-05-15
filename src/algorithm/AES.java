@@ -372,15 +372,6 @@ public class AES {
         return ("00" + str).substring(str.length()).toUpperCase();
     }
 
-
-    public static void main(String[] args) {
-
-        String[][] block = {{"32", "88", "31", "e0"}, {"43", "5a", "31", "37"}, {"f6", "30", "98", "07"}, {"a8", "8d", "a2", "34"}};
-        SymmetricKey symmetricKey = new SymmetricKey(128);
-        blockCipherEncryption(block,symmetricKey);
-        blockCipherDecryption(block, symmetricKey);
-
-    }
     private static String subByteInverse(String hex) {
 
         int decimalValue = Integer.parseInt(hex, 16);
